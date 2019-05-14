@@ -1,0 +1,42 @@
+import pandas as pd
+import re
+
+def is_valid_email(email):
+    if len(email) > 7:
+        return bool(re.match("^.+@(\[?)[a-zA-Z0-9-.]", email))
+
+def get_payable_submissions(file_name, worksheet_name):
+    data = pd.read_excel(file_name, str(worksheet_name))
+    data['has_email'] = data.user_paypal_email.apply(lambda x: is_valid_email(str(x)))
+    data = data[data.has_email==True]
+    data = data[~data.payout_currency.isna()]
+    data = data[['user_paypal_email', 'payout_value', 'payout_currency']]
+    return data
+
+def is_number(x):
+    return bool(re.match('(\[?)[0-9]', x))
+
+file_name = input('File name\n')
+file = pd.ExcelFile(file_name)
+
+tabs = file.sheet_names
+tabs = [x for x in tabs if is_number(x)]
+
+master = pd.DataFrame()
+for each in tabs:
+    if master.empty:
+        master = get_payable_submissions('Mastersheet 13-5.xlsm', each)
+    else:
+        master = pd.concat(
+            [master, get_payable_submissions('Mastersheet 13-5.xlsm', each)])
+print(master)
+
+writer = pd.ExcelWriter(
+    file_name[:-4]+'xlsx', engine='xlsxwriter')
+
+for each in master.payout_currency.unique():
+    temp = master[master.payout_currency==each]
+    temp.to_excel(writer, sheet_name=each)
+    
+writer.save()
+print(f'Saved to {file_name[:-4]+'xlsx'}')
