@@ -1,27 +1,65 @@
+
+
+```python
 import pandas as pd
 import re
+```
 
+
+```python
+#verify is the email is valid
 def is_valid_email(email):
     if len(email) > 7:
         return bool(re.match("^.+@(\[?)[a-zA-Z0-9-.]", email))
+    
+#To test REGEX validation, use code below:
+#if is_valid_email("angele.lenglemetz@streetbees.com") == True:
+#   print("This is a valid email address")
+#else:
+#    print("This is not a valid email address")
 
+```
+
+
+```python
+#read the file and creates a new one with currency tabs
 def get_payable_submissions(file_name, worksheet_name):
+#read excel file and apply validation 
     data = pd.read_excel(file_name, str(worksheet_name))
     data['has_email'] = data.user_paypal_email.apply(lambda x: is_valid_email(str(x)))
     data = data[data.has_email==True]
+#verify that the currency is not Nan
     data = data[~data.payout_currency.isna()]
+#create a dataset containing the right column and return it
     data = data[['user_paypal_email', 'payout_value', 'payout_currency']]
     return data
 
+```
+
+
+```python
+#Verify if x is a number
 def is_number(x):
     return bool(re.match('(\[?)[0-9]', x))
+```
 
+
+```python
+#Ask user for the name of the file they want to use and read the Excel file
 file_name = input('File name\n')
 file = pd.ExcelFile(file_name)
+```
 
+
+```python
+#Check if the name of the tabs in the file are project numbers
 tabs = file.sheet_names
 tabs = [x for x in tabs if is_number(x)]
+```
 
+
+```python
+#for each tab verify if there are submissions, if empty, create a new file, otherwise, add to it 
 master = pd.DataFrame()
 for each in tabs:
     if master.empty:
@@ -31,12 +69,31 @@ for each in tabs:
             [master, get_payable_submissions('Mastersheet 13-5.xlsm', each)])
 print(master)
 
+```
+
+
+```python
+#change the name of the file to make is an Excel file 
 writer = pd.ExcelWriter(
     file_name[:-4]+'xlsx', engine='xlsxwriter')
+```
 
+
+```python
+#Get the name of the currencies in the file, take the payout and create a new tab for each of them 
 for each in master.payout_currency.unique():
     temp = master[master.payout_currency==each]
     temp.to_excel(writer, sheet_name=each)
-    
+```
+
+
+```python
+#Save the file 
 writer.save()
 print(f'Saved to {file_name[:-4]+'xlsx'}')
+```
+
+
+```python
+
+```
